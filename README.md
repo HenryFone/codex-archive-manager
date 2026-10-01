@@ -126,22 +126,22 @@ set SESSIONS_VIEWER_PATH=E:\SessionsViewer\Sessions Viewer.exe
 - After a successful archive, **do not put the lock file back by hand** — that would
   make unarchiving hit the same wall again.
 
-## FAQ
+## FAQ（常见问题）
 
-| Symptom | What to do |
+| Symptom / 现象 | What to do / 怎么办 |
 | --- | --- |
-| Archive still fails from the sidebar | Use this web UI, or park the lock from it first |
-| `os error 32` / `failed to open thread writer lock` | Expected — that's the bug this tool works around |
-| Web page won't open | Port busy? It auto-switches; check `logs\manager_gui.log` |
-| I want to undo an archive | Open the "Archived" tab → Unarchive |
-| Page flickers once in a while | Normal — it re-renders every 20s only when data actually changed |
-| What is a "zombie" lock? | The chat has definitely finished and no process holds the lock - it is leftover. "Clean zombie locks" clears these safely |
-| Why is a session "busy" and not unlockable? | Its last recorded event is `task_started`, so it may still be running. Wait ~2 min and refresh; the button turns into "Force archive" once it settles |
-| A chat shows "held by another window" | A Codex window still holds its writer lock. Click "Archive anyway" - the tool parks the lock, archives, then puts it back. It does not close your window |
-| Can it touch a chat I am using right now? | Not if you list its ID in `CODEX_ARCHIVE_PROTECTED`; protected chats show a purple dot and are skipped by every automatic action |
-| Where do exports and deleted-session snapshots go? | `exports\` and `backup\deleted\` next to the script; the "Open folder" buttons jump straight there |
-| Does it ever touch `.coordination.lock`? | Never. Only per-session `<thread-id>.lock` files are parked, and only after a backup under `backup\locks\` |
-| The window opened on 8766, not 8765 | The port was busy, so it auto-shifted. Use `--port 9000` if you want a fixed one |
+| Archive still fails from the sidebar<br>从侧边栏点「归档对话」还是失败 | Use this web UI, or park the lock from it first<br>改用本工具网页，先在网页里挑锁再归档 |
+| `os error 32` / `failed to open thread writer lock`<br>报 `os error 32` / `failed to open thread writer lock` | Expected — that's the bug this tool works around<br>属于预期内，正是本工具要绕开的那个 bug |
+| Web page won't open<br>网页打不开 | Port busy? It auto-switches; check `logs\manager_gui.log`<br>端口被占？会自动换端口；可看 `logs\manager_gui.log` |
+| I want to undo an archive<br>想取消归档 | Open the "Archived" tab → Unarchive<br>打开「已归档」页→ 取消归档 |
+| Page flickers once in a while<br>页面偶尔闪一下 | Normal — it re-renders every 20s only when data actually changed<br>正常：只有数据真变了才会每 20 秒重刷一次 |
+| What is a "zombie" lock?<br>什么叫「僵尸锁」？ | The chat has definitely finished and no process holds the lock - it is leftover. "Clean zombie locks" clears these safely<br>会话已确定跑完、没任何进程占着这把锁，是残留下来的。点「一键清理残留锁」就能安全清掉 |
+| Why is a session "busy" and not unlockable?<br>为什么会话显示「运行中」且不能解锁？ | Its last recorded event is `task_started`, so it may still be running. Wait ~2 min and refresh; the button turns into "Force archive" once it settles<br>它最后一条记录是 `task_started`，可能还在跑。等约 2 分钟再刷新，安静后按钮会变成「强制归档」 |
+| A chat shows "held by another window"<br>会话显示「被其他窗口占用」 | A Codex window still holds its writer lock. Click "Archive anyway" - the tool parks the lock, archives, then puts it back. It does not close your window<br>某个 Codex 窗口还拿着写锁。点「仍要归档」，工具会先备份再把锁暂时挪走，归档完再放回去，不会关你的窗口 |
+| Can it touch a chat I am using right now?<br>它会动我正在用的对话吗？ | Not if you list its ID in `CODEX_ARCHIVE_PROTECTED`; protected chats show a purple dot and are skipped by every automatic action<br>把会话 ID 加进 `CODEX_ARCHIVE_PROTECTED` 就不会；受保护的会话显示紫点，所有自动动作都会跳过它 |
+| Where do exports and deleted-session snapshots go?<br>导出文件和删除快照在哪？ | `exports\` and `backup\deleted\` next to the script; the "Open folder" buttons jump straight there<br>就在脚本旁边的 `exports\` 和 `backup\deleted\`；点界面上的「导出文件夹」直接跳过去 |
+| Does it ever touch `.coordination.lock`?<br>它会动 `.coordination.lock` 吗？ | Never. Only per-session `<thread-id>.lock` files are parked, and only after a backup under `backup\locks\`<br>绝不会。只会挪每个会话自己的 `<thread-id>.lock`，而且先备份到 `backup\locks\` 才动 |
+| The window opened on 8766, not 8765<br>窗口开在 8766 而不是 8765 | The port was busy, so it auto-shifted. Use `--port 9000` if you want a fixed one<br>端口被占会自动往后移。想固定端口就用 `--port 9000` |
 
 ## Files
 
