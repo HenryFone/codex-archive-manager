@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codex 归档管理器</title>
+<style>
+:root{
+  --bg:#0f1115; --panel:#171a21; --panel2:#1d212a; --line:#2a2f3a;
+  --text:#e8eaf0; --muted:#9aa3b2; --accent:#4f7cff; --accent2:#3a63d8;
+  --green:#2fbf71; --orange:#e6a23c; --red:#e5534b; --purple:#9d6bff;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:14px/1.5 "Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 18px 60px}
+header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+h1{font-size:20px;margin:0;font-weight:650}
+.sub{color:var(--muted);font-size:12px}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;
+  padding:5px 12px;font-size:12.5px;color:var(--muted)}
+.chip b{color:var(--text)}
+.chip.warn{border-color:#5a4316;color:#f0c674}
+.chip.danger{border-color:#5a2622;color:#ff9b95}
+.chip.held{border-color:#6b4a1f;color:#ffc078}
+.tabs{display:flex;gap:6px;margin:10px 0 12px}
+.tab{padding:7px 16px;border-radius:9px;background:var(--panel);border:1px solid var(--line);
+  color:var(--muted);cursor:pointer;font-size:13.5px;user-select:none}
+.tab.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+input[type=search],select{background:var(--panel);border:1px solid var(--line);color:var(--text);
+  border-radius:9px;padding:8px 12px;font-size:13.5px;outline:none}
+input[type=search]{min-width:240px;flex:1}
+input[type=search]:focus,select:focus{border-color:var(--accent)}
+button{background:var(--panel);border:1px solid var(--line);color:var(--text);
+  border-radius:9px;padding:8px 13px;font-size:13px;cursor:pointer;white-space:nowrap}
+button:hover{border-color:var(--accent);color:#fff}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button.primary:hover{background:var(--accent2)}
+button.ghost{background:transparent}
+button.mini{padding:5px 10px;font-size:12.5px;border-radius:7px}
+button.danger:hover{border-color:var(--red);color:#ff9b95}
+button.held-action{border-color:#6b4a1f;color:#ffc078;background:#2a2114}
+button.held-action:hover{border-color:#ffb061;color:#fff}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:disabled:hover{border-color:var(--line);color:var(--muted)}
+/* 刷新：常用操作，做得醒目 */
+button.refresh{background:linear-gradient(180deg,#5b87ff,#3f6ae8);border-color:#6b93ff;
+  color:#fff;font-weight:700;padding:9px 16px;box-shadow:0 2px 10px #4f7cff33}
+button.refresh:hover{background:linear-gradient(180deg,#6b95ff,#4a74f0);border-color:#86a7ff;color:#fff}
+button.refresh .ico{display:inline-block;font-size:15px;margin-right:5px;vertical-align:-1px}
+button.refresh.loading .ico{animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.last-refresh{color:var(--muted);font-size:12px;white-space:nowrap}
+.tok{color:#8fb4ff}
+.vieweye{display:inline-block;width:13px;height:9px;border:1.6px solid currentColor;
+  border-radius:50% 50% 50% 50%/60% 60% 60% 60%;margin-right:6px;vertical-align:-1px;position:relative}
+.vieweye::after{content:"";position:absolute;left:4px;top:1.5px;width:3px;height:3px;
+  border-radius:50%;background:currentColor}
+.sep{width:1px;height:22px;background:var(--line);margin:0 2px}
+.bar2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:-6px 0 14px}
+.list{display:flex;flex-direction:column;gap:9px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:12px 14px;display:flex;gap:12px;align-items:flex-start}
+.card:hover{border-color:#39404e}
+.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none;background:var(--green)}
+.dot.arch{background:#6b7280}
+.dot.zombie{background:var(--orange)}
+.dot.held{background:#ffb061}
+.dot.busy{background:var(--accent)}
+.dot.protected{background:var(--purple)}
+.main{flex:1;min-width:0}
+.title{font-weight:600;font-size:14.5px;word-break:break-all;margin-bottom:3px}
+.meta{color:var(--muted);font-size:12px;display:flex;gap:12px;flex-wrap:wrap}
+.meta span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px}
+.badge{display:inline-block;font-size:11.5px;border-radius:999px;padding:1px 9px;
+  border:1px solid var(--line);color:var(--muted);margin-left:8px;vertical-align:1px}
+.badge.arch{color:#aab3c2}
+.badge.zombie{color:#f0c674;border-color:#5a4316;cursor:help}
+.badge.busy{color:#9db4ff;border-color:#2b3d7d;cursor:help}
+.badge.held{color:#ffb061;border-color:#6b4a1f;cursor:help}
+.badge.stale{color:#f0c674;border-color:#5a4316;cursor:help}
+.badge.settling{color:#9aa3b2;border-color:#3a404d;cursor:help}
+.badge.orphan{color:#ff9b95;border-color:#5a2622;cursor:help}
+.badge.protected{color:#c3aaff;border-color:#4a3580;cursor:help}
+.badge.nolock{display:none}
+.ops{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:330px}
+.empty{color:var(--muted);text-align:center;padding:50px 0;font-size:14px}
+#toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:99}
+.toast{background:#222733;border:1px solid var(--line);border-left:4px solid var(--accent);
+  border-radius:9px;padding:10px 14px;max-width:380px;font-size:13px;box-shadow:0 6px 22px #0008;
+  animation:in .18s ease}
+.toast.ok{border-left-color:var(--green)}
+.toast.err{border-left-color:var(--red)}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+.mask{position:fixed;inset:0;background:#0009;display:none;align-items:center;justify-content:center;z-index:50}
+.mask.show{display:flex}
+.modal{background:var(--panel2);border:1px solid var(--line);border-radius:14px;
+  padding:20px 22px;max-width:460px;width:calc(100% - 40px)}
+.modal h3{margin:0 0 8px;font-size:16px}
+.modal p{color:var(--muted);margin:6px 0 16px;font-size:13.5px;word-break:break-all;white-space:pre-line}
+.modal .row{display:flex;gap:8px;justify-content:flex-end}
+.legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin:0 2px 10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.legend i.g{background:var(--green)}.legend i.y{background:var(--orange)}
+.legend i.o{background:#ffb061}.legend i.p{background:var(--purple)}
+.foot{color:var(--muted);font-size:12px;margin-top:26px;text-align:center}
+.foot code{background:var(--panel);padding:2px 6px;border-radius:5px}
+@media(max-width:720px){.ops{max-width:100%;justify-content:flex-start}.card{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Codex 归档管理器</h1>
+      <div class="sub" id="envline">正在读取…</div>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="chip">全部 <b id="s-all">0</b></div>
+    <div class="chip">未归档 <b id="s-active">0</b></div>
+    <div class="chip">已归档 <b id="s-arch">0</b></div>
+    <div class="chip warn" title="会话已跑完但锁没释放，清理后归档不再报错">僵尸锁 <b id="s-zombie">0</b></div>
+    <div class="chip danger" title="正在运行的会话，锁不能动">运行中 <b id="s-busy">0</b></div>
+    <div class="chip held" title="正被 Codex 窗口占用；可临时挪开写锁完成归档，不需要关闭窗口">被占用·可挪锁归档 <b id="s-held">0</b></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab on" data-tab="active">未归档</div>
+    <div class="tab" data-tab="archived">已归档</div>
+    <div class="tab" data-tab="all">全部</div>
+  </div>
+
+  <div class="bar">
+    <input type="search" id="q" placeholder="搜索标题 / 目录 / 会话ID…（按 / 快速聚焦）">
+    <select id="sort">
+      <option value="time">按时间排序</option>
+      <option value="title">按标题排序</option>
+    </select>
+    <button id="refresh" class="refresh" title="立即刷新（页面每 20 秒也会自动刷新）"><span class="ico">↻</span>刷新</button>
+    <span class="last-refresh" id="last-refresh">尚未刷新</span>
+  </div>
+
+  <div class="bar2">
+    <button id="open-viewer" title="打开 Sessions Viewer：只读浏览 / 搜索 / 统计会话"><span class="vieweye"></span>会话查看器</button>
+    <span class="sep"></span>
+    <button id="unlock-zombies" title="把已跑完、且没有进程占用的残留锁清掉">一键清理残留锁</button>
+    <button id="archive-zombies" title="清理所有已跑完会话的残留锁并归档；被占用的会自动跳过" class="primary">清理残留锁并归档</button>
+    <span class="sep"></span>
+    <button id="backup">备份</button>
+    <button id="open-exports" class="ghost">导出文件夹</button>
+  </div>
+
+  <div class="legend">
+    <span><i class="g"></i>正常，可直接归档</span>
+    <span><i class="y"></i>残留锁，可清理后归档</span>
+    <span><i class="o"></i>被其他窗口占用，可临时挪锁归档</span>
+    <span><i class="p"></i>当前对话，受保护</span>
+  </div>
+  <div class="list" id="list"></div>
+  <div class="foot">本工具走官方 codex 命令，不直接改数据库。页面每 20 秒自动刷新；关掉这个网页，后台程序会自动退出。</div>
+</div>
+
+<div id="toasts"></div>
+
+<div class="mask" id="mask">
+  <div class="modal">
+    <h3 id="m-title">确认</h3>
+    <p id="m-text"></p>
+    <div class="row">
+      <button id="m-cancel" class="ghost">取消</button>
+      <button id="m-ok" class="primary">确定</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let STATE = {threads: [], stats: {}};
+let TAB = "active", Q = "", SORT = "time";
+const $ = s => document.querySelector(s);
+
+function esc(s){return (s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+function fmtTokens(n){ n = Number(n)||0; return n>=1e6 ? (n/1e6).toFixed(1)+"M" : n>=1e3 ? (n/1e3).toFixed(1)+"K" : String(n); }
+
+function toast(msg, kind){
+  const d = document.createElement("div");
+  d.className = "toast " + (kind||"");
+  d.textContent = msg;
+  $("#toasts").appendChild(d);
+  setTimeout(()=>{d.style.opacity="0";d.style.transition="opacity .3s";setTimeout(()=>d.remove(),320);}, 4200);
+}
+
+function api(path, body){
+  return fetch(path, body===undefined ? {} : {
+    method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body||{})
+  }).then(r=>r.json()).catch(e=>({ok:false,message:"网络错误："+e}));
+}
+
+function confirmBox(title, text, okText){
+  return new Promise(res=>{
+    $("#m-title").textContent = title;
+    $("#m-text").textContent = text;
+    $("#m-ok").textContent = okText || "确定";
+    $("#mask").classList.add("show");
+    const done = v =>{$("#mask").classList.remove("show");$("#m-ok").onclick=null;$("#m-cancel").onclick=null;res(v);};
+    $("#m-ok").onclick = ()=>done(true);
+    $("#m-cancel").onclick = ()=>done(false);
+  });
+}
+
+function badge(d){
+  const l = d.lock || {};
+  if(d.protected) return '<span class="badge protected" title="'+esc(l.detail)+'">当前对话·受保护</span>';
+  if(l.state==="held") return '<span class="badge held" title="'+esc(l.detail)+'">被其他窗口占用</span>';
+  if(l.state==="zombie") return '<span class="badge zombie" title="'+esc(l.detail)+'">残留锁·可安全解锁</span>';
+  if(l.state==="stale") return '<span class="badge stale" title="'+esc(l.detail)+'">残留锁·状态未知</span>';
+  if(l.state==="busy") return '<span class="badge busy" title="'+esc(l.detail)+'">最近一次记录是开始</span>';
+  if(l.state==="settling") return '<span class="badge settling" title="'+esc(l.detail)+'">刚活动过·再等'+(l.wait||"")+'秒</span>';
+  if(l.state==="orphan") return '<span class="badge orphan" title="'+esc(l.detail)+'">残留锁·文件缺失</span>';
+  return "";
+}
+
+function visible(){
+  let arr = STATE.threads.slice();
+  if(TAB==="active") arr = arr.filter(t=>!t.archived);
+  if(TAB==="archived") arr = arr.filter(t=>t.archived);
+  if(Q){
+    const q = Q.toLowerCase();
+    arr = arr.filter(t=>(t.title||"").toLowerCase().includes(q)
+      || (t.cwd||"").toLowerCase().includes(q)
+      || (t.id||"").toLowerCase().includes(q));
+  }
+  if(SORT==="title") arr.sort((a,b)=>(a.title||"").localeCompare(b.title||"","zh"));
+  else arr.sort((a,b)=>b.ts-a.ts);
+  return arr;
+}
+
+function ops(d){
+  const b=[];
+  if(d.archived){
+    b.push(`<button class="mini" data-op="unarchive" data-id="${d.id}">取消归档</button>`);
+  }else{
+    if(d.protected){
+      b.push(`<button class="mini" disabled title="当前对话受保护">归档</button>`);
+    }else if(d.lock && d.lock.state==="held"){
+      b.push(`<button class="mini held-action" data-op="archive-held" data-id="${d.id}" title="${esc(d.lock.detail)}">仍要归档</button>`);
+    }else if(d.lock && (d.lock.state==="zombie"||d.lock.state==="stale"||d.lock.state==="orphan")){
+      b.push(`<button class="mini primary" data-op="archive-force" data-id="${d.id}" title="先备份并清掉残留锁，再归档">清理残留锁并归档</button>`);
+      b.push(`<button class="mini" data-op="unlock" data-id="${d.id}">仅清锁</button>`);
+    }else{
+      b.push(`<button class="mini primary" data-op="archive" data-id="${d.id}">归档</button>`);
+    }
+  }
+  b.push(`<button class="mini" data-op="export" data-id="${d.id}">导出</button>`);
+  b.push(`<button class="mini" data-op="open" data-id="${d.id}">打开</button>`);
+  if(!d.protected) b.push(`<button class="mini danger" data-op="delete" data-id="${d.id}">删除</button>`);
+  return b.join("");
+}
+
+function render(){
+  const arr = visible();
+  const box = $("#list");
+  if(!arr.length){
+    let msg = "没有符合条件的会话";
+    if(Q) msg = "没有找到与「" + Q + "」匹配的会话";
+    else if(TAB==="active") msg = "太干净了：全部会话都已归档 ✓";
+    else if(TAB==="archived") msg = "还没有已归档的会话";
+    box.innerHTML = '<div class="empty">' + esc(msg) + '</div>';
+  }
+  else box.innerHTML = arr.map(d=>{
+    const lk = (d.lock||{}).state;
+    const dot = d.archived ? "arch"
+      : (d.protected ? "protected"
+      : (lk==="held" ? "held"
+      : (lk==="busy" ? "busy"
+      : (lk==="zombie"||lk==="stale"||lk==="orphan" ? "zombie" : ""))));
+    return `
+    <div class="card">
+      <div class="dot ${dot}"></div>
+      <div class="main">
+        <div class="title">${esc(d.title)}${badge(d)}</div>
+        <div class="meta">
+          <span title="会话ID">${d.id}</span>
+          <span>${d.time}</span>
+          ${d.tokens>0 ? `<span class="tok" title="该会话本地记录的累计 token 用量">Token ${fmtTokens(d.tokens)}</span>` : ""}
+          <span title="${esc(d.cwd)}">📁 ${esc(d.cwd_name||d.cwd||"未知目录")}</span>
+        </div>
+      </div>
+      <div class="ops">${ops(d)}</div>
+    </div>`;
+  }).join("");
+}
+
+function applyStats(){
+  const s = STATE.stats||{};
+  $("#s-all").textContent = s.total||0;
+  $("#s-active").textContent = s.active||0;
+  $("#s-arch").textContent = s.archived||0;
+  $("#s-zombie").textContent = s.zombie||0;
+  $("#s-busy").textContent = s.busy||0;
+  $("#s-held").textContent = s.held||0;
+  const exeName = STATE.codex ? STATE.codex.split("\\").pop() : "";
+  $("#envline").textContent = "本机 · " + (STATE.db ? STATE.db.split("\\").pop() : "?")
+    + (exeName ? " · " + exeName : " · 未找到 codex.exe");
+}
+
+// 内容签名：数据没变化就不重画，避免每 20 秒白闪一次
+let LAST_SIG = null;
+function sigOf(st){
+  const parts = [];
+  const s = st.stats||{};
+  ["total","active","archived","zombie","busy","held"].forEach(k=>parts.push(k+"="+(s[k]||0)));
+  (st.threads||[]).forEach(t=>parts.push(t.id+"|"+(t.archived?1:0)+"|"+(t.title||"")+"|"+((t.lock||{}).state||"")+"|"+(t.protected?1:0)));
+  return parts.join(";");
+}
+
+async function refresh(showTip, quiet){
+  const btn = $("#refresh");
+  if(showTip && btn.disabled) return;
+  if(showTip){ btn.classList.add("loading"); btn.disabled = true; }
+  try{
+    const st = await api("/api/state");
+    if(!st.ok){ if(!quiet) toast(st.error||"读取失败","err"); return; }
+    $("#last-refresh").textContent = "上次刷新 " + new Date().toLocaleTimeString("zh-CN",{hour12:false});
+    const sig = sigOf(st);
+    if(sig === LAST_SIG){ if(showTip) toast("已刷新，数据没有变化",""); return; }
+    LAST_SIG = sig;
+    STATE = st;
+    const y = window.scrollY;
+    render(); applyStats();
+    if(window.scrollY !== y) window.scrollTo(0, y);
+    if(showTip) toast("已刷新","ok");
+  } finally {
+    if(showTip){ btn.classList.remove("loading"); btn.disabled = false; }
+  }
+}
+
+// ---- 页面心跳：开着网页=后台程序活着；网页全关=后台自动退出 ----
+const CID = (self.crypto && crypto.randomUUID) ? crypto.randomUUID()
+  : (String(Date.now()) + "-" + Math.random().toString(16).slice(2));
+function beat(){
+  fetch("/api/heartbeat", {method:"POST", headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({cid:CID})}).catch(()=>{});
+}
+function bye(e){
+  // 只是切标签/前进后退不算关闭，不要误杀后台程序
+  if(e && e.type === "pagehide" && e.persisted) return;
+  try{ navigator.sendBeacon("/api/close", JSON.stringify({cid:CID})); }catch(err){}
+}
+beat();
+setInterval(beat, 5000);
+window.addEventListener("pagehide", bye);
+window.addEventListener("beforeunload", bye);
+
+// 操作分发
+$("#list").addEventListener("click", async e=>{
+  const btn = e.target.closest("button[data-op]");
+  if(!btn) return;
+  const id = btn.dataset.id, op = btn.dataset.op;
+  const d = STATE.threads.find(t=>t.id===id)||{};
+  let r = null;
+  if(op==="archive"){
+    r = await api("/api/archive",{id});
+  }else if(op==="archive-held"){
+    const ok = await confirmBox("仍要归档（临时挪开写锁）", "这个会话正被其他 Codex 窗口占用。\n\n程序会：\n1. 备份这把锁；\n2. 临时把锁改名挪开；\n3. 调用官方归档；\n4. 把锁原样放回。\n\n不会关闭窗口、不会结束进程。归档后这个会话会从当前列表消失。\n\n确定继续吗？", "仍要归档");
+    if(!ok) return;
+    r = await api("/api/archive",{id, held:true});
+  }else if(op==="archive-force"){
+    const ok = await confirmBox("清理残留锁并归档", "会先备份并清掉【没有进程占用】的残留锁，再归档：\n"+(d.title||"")+"\n\n如果这个会话其实还在运行，请点取消。", "清理并归档");
+    if(!ok) return;
+    r = await api("/api/archive",{id, force:true});
+  }else if(op==="unlock"){
+    const ok = await confirmBox("仅清理残留锁", "只清掉【没有进程占用】的残留锁（会备份），不归档：\n"+(d.title||""), "清理");
+    if(!ok) return;
+    r = await api("/api/unlock",{id});
+  }else if(op==="unarchive"){
+    r = await api("/api/unarchive",{id});
+  }else if(op==="export"){
+    r = await api("/api/export",{id, think:true});
+  }else if(op==="open"){
+    r = await api("/api/open",{id});
+  }else if(op==="delete"){
+    const ok = await confirmBox("删除会话（不可恢复）", "将永久删除：\n"+(d.title||"")+"\n\n删除前会自动留一份快照到 backup\\deleted。确定删除吗？", "删除");
+    if(!ok) return;
+    r = await api("/api/delete",{id});
+  }
+  if(r){ toast(r.message||(r.ok?"完成":"失败"), r.ok?"ok":"err"); if(r.refresh) refresh(); }
+});
+
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));
+  t.classList.add("on"); TAB = t.dataset.tab; render();
+}));
+$("#q").addEventListener("input", e=>{Q=e.target.value.trim();render();});
+$("#sort").addEventListener("change", e=>{SORT=e.target.value;render();});
+$("#refresh").addEventListener("click", ()=>refresh(true));
+$("#open-viewer").addEventListener("click", async ()=>{
+  const r = await api("/api/open-viewer",{});
+  toast(r.message||(r.ok?"已打开":"打开失败"), r.ok?"ok":"err");
+});
+
+// 快捷键：/ 聚焦搜索；Esc 关弹窗 / 清空搜索
+document.addEventListener("keydown", e=>{
+  const tag = (document.activeElement && document.activeElement.tagName) || "";
+  if(e.key === "/" && !/INPUT|SELECT|TEXTAREA/.test(tag)){
+    e.preventDefault(); $("#q").focus();
+  }else if(e.key === "Escape"){
+    if($("#mask").classList.contains("show")){ $("#m-cancel").click(); }
+    else if(document.activeElement === $("#q")){
+      if($("#q").value){ $("#q").value=""; Q=""; render(); } else { $("#q").blur(); }
+    }
+  }
+});
+$("#unlock-zombies").addEventListener("click", async()=>{
+  const r = await api("/api/unlock-zombies",{});
+  toast(r.message||"?", r.ok?"ok":"err"); if(r.refresh) refresh();
+});
+$("#archive-zombies").addEventListener("click", async()=>{
+  const ok = await confirmBox("清理残留锁并归档", "会清理所有【已跑完、且没有进程占用】的残留锁，然后归档。\
+正在运行或被窗口占用的会话会自动跳过。继续吗？", "开始");
+  if(!ok) return;
+  const r = await api("/api/archive-all-zombies",{});
+  toast(r.message||"?", r.ok?"ok":"err"); if(r.refresh) refresh();
+});
+$("#backup").addEventListener("click", async()=>{
+  const r = await api("/api/backup",{});
+  toast(r.message||"?", r.ok?"ok":"err");
+});
+$("#open-exports").addEventListener("click", ()=>{api("/api/reveal",{which:"exports"});});
+
+refresh();
+setInterval(()=>{
+  if(!$("#mask").classList.contains("show")) refresh(false, true);
+}, 20000);
+</script>
+</body>
+</html>
