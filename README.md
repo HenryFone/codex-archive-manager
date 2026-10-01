@@ -7,6 +7,18 @@ including the ones the sidebar refuses to archive because of the thread-writer l
 > **Status:** Windows 11 + Codex Desktop `26.924.x` tested end-to-end on real sessions.
 > Pure Python standard library, no third-party packages, binds to `127.0.0.1` only.
 
+## 界面预览
+
+主界面（未归档）：
+
+![主界面](docs/screenshots/01-overview.png)
+
+已归档视图 —— 归档后可随时取消归档：
+
+![已归档](docs/screenshots/02-archived.png)
+
+> 截图里的会话名是演示数据（真实界面 + 假数据），不是任何人的真实会话。
+
 ## The problem
 
 On recent Codex Desktop builds, clicking "Archive chat" in the sidebar can fail even
@@ -123,6 +135,13 @@ set SESSIONS_VIEWER_PATH=E:\SessionsViewer\Sessions Viewer.exe
 | Web page won't open | Port busy? It auto-switches; check `logs\manager_gui.log` |
 | I want to undo an archive | Open the "Archived" tab → Unarchive |
 | Page flickers once in a while | Normal — it re-renders every 20s only when data actually changed |
+| What is a "zombie" lock? | The chat has definitely finished and no process holds the lock - it is leftover. "Clean zombie locks" clears these safely |
+| Why is a session "busy" and not unlockable? | Its last recorded event is `task_started`, so it may still be running. Wait ~2 min and refresh; the button turns into "Force archive" once it settles |
+| A chat shows "held by another window" | A Codex window still holds its writer lock. Click "Archive anyway" - the tool parks the lock, archives, then puts it back. It does not close your window |
+| Can it touch a chat I am using right now? | Not if you list its ID in `CODEX_ARCHIVE_PROTECTED`; protected chats show a purple dot and are skipped by every automatic action |
+| Where do exports and deleted-session snapshots go? | `exports\` and `backup\deleted\` next to the script; the "Open folder" buttons jump straight there |
+| Does it ever touch `.coordination.lock`? | Never. Only per-session `<thread-id>.lock` files are parked, and only after a backup under `backup\locks\` |
+| The window opened on 8766, not 8765 | The port was busy, so it auto-shifted. Use `--port 9000` if you want a fixed one |
 
 ## Files
 
