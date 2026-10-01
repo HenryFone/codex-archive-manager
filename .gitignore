@@ -1,0 +1,7 @@
+# runtime state
+logs/
+backup/
+exports/
+manager.pid
+*.pyc
+__pycache__/
